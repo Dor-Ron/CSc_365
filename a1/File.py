@@ -9,7 +9,8 @@ class File:
         # generate 2d random int array
         numbers = []
         for i in range(10):
-            numbers.append([randint(0, 1000) for _ in range(10)])
+            numbers.append([randint(0, 1000) for _ in range(100)])
+        numbers.append(range(100))
 
         # write rows of 2d array as lines to file
         with open("random_numbers.txt", "w") as file:
