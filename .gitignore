@@ -119,4 +119,4 @@ dmypy.json
 *.txt
 
 # mac shit
-DS*
+.DS*
