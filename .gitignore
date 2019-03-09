@@ -120,3 +120,6 @@ dmypy.json
 
 # mac shit
 .DS*
+
+# python byte code
+.pyc
