@@ -3,6 +3,7 @@ __author__ = "Dor Rondel"
 import cv2
 import numpy as np
 from random import choice
+from time import sleep
 
 # step one - read image
 filename = ""
@@ -142,6 +143,7 @@ for row in range(height):
             labels["l" + str(output_binary_img[row, col])] = [(row, col)]
         else:
             labels["l" + str(output_binary_img[row, col])].append((row, col))
+
 
 if "l0" in labels:
     del labels["l0"]
