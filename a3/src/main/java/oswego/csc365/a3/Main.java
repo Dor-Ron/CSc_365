@@ -1,58 +1,21 @@
 package oswego.csc365.a3;
 
-public class Main 
-{
-    public static void main( String[] args ) throws java.lang.reflect.InvocationTargetException {
-        BTree bt = new BTree(3);
-        bt.insert("a"); 
-        bt.insert("c"); 
-        bt.insert("g"); 
-        bt.insert("j"); 
-        bt.insert("k"); 
-        bt.insert("m"); 
-        bt.insert("n"); 
-        bt.insert("o");
-        bt.insert("r");
-        bt.insert("p"); 
-        bt.insert("s"); 
-        bt.insert("x"); 
-        bt.insert("y"); 
-        bt.insert("z"); 
-        bt.insert("u"); 
-        bt.insert("d"); 
-        bt.insert("q"); 
-        bt.insert("e");
-        bt.insert("t");
-        bt.insert("v"); 
-        bt.insert("b"); 
-        bt.insert("l");
-        bt.insert("f");
+import java.io.*;
 
-        System.out.println("Traversal of tree");
-        bt.traverse(); 
+public class Main {
+    public static void main( String[] args ) throws java.io.IOException {
 
-        bt.remove("f");
-        System.out.println("Traversal of tree after removing f");
-        bt.traverse(); 
+        BTree bt = new BTree(5); 
 
-        bt.remove("m");
-        System.out.println("Traversal of tree after removing m");
-        bt.traverse(); 
+        ClassLoader classloader = Thread.currentThread().getContextClassLoader();
+        InputStream is = classloader.getResourceAsStream("words.txt");
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        String line;
 
-        bt.remove("g");
-        System.out.println("Traversal of tree after removing m");
-        bt.traverse();
+        while ((line = reader.readLine()) != null)
+            bt.insert(line);
+        is.close();
 
-        bt.remove("d");
-        System.out.println("Traversal of tree after removing m");
-        bt.traverse(); 
-
-        bt.remove("b");
-        System.out.println("Traversal of tree after removing m");
-        bt.traverse();  
-
-        bt.remove("p");
-        System.out.println("Traversal of tree after removing m");
         bt.traverse();
     }
 }
