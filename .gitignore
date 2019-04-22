@@ -123,3 +123,8 @@ dmypy.json
 
 # python byte code
 .pyc
+
+# Professor's slides
+/slides
+*.docx
+.flraf
