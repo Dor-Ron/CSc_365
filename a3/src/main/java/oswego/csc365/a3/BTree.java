@@ -1,402 +1,455 @@
 package oswego.csc365.a3;
 
-/* 
-Author: Dor Rondel
-Course: CSc 365
-Instructor: Prof. Ioaona Coman
-Program: String BTree
+import java.io.Serializable;
 
-Big thanks to https://www.geeksforgeeks.org/b-tree-set-1-introduction-2/ 
-For providing C++ code for Integer BTrees, that was translated to Java and modified
-to make up for programming language differences and program specifications.
-*/
+public class BTree implements Serializable {
+    
+    public static int order;
+    public int minKeys;
+    public Node root;
+    public Node latterSplit;
+    public int count = 0;
+    public Cache cache = null;
+    public static int blockAmount = 0;
 
-public class BTree {
-    public BTNode root;
-    public static int branchingFactor;
-    public int height;
-
-
-    // constructor
-    public BTree(int bf) {
-        branchingFactor = bf;  
+    // Constructor for local in-memory tree
+    BTree(int order) {
         root = null;
-        height = 0;
+        BTree.order = order;
+        minKeys = order / 2;		
     }
 
-    // btree wrapper for btnode traverse
-    public void traverse() {
-        if (root != null) 
-            root.traverse();
+    // Constructor to load BTree from .hdr file ADT
+    BTree(Header header) {
+        BTree.order = header.order;
+        minKeys = order / 2;
+        count = header.totalWords;
+        blockAmount = header.nodeAmount;
+        cache = header.cache;
+        cache.emptyBlocks = header.emptyBlocks;
     }
 
-    // btree wrapper for btnode search
-    public BTNode search(String word) {
-        return root == null ? null : root.search(word);
+    // sets BTree attributes in accordance to param .hdr ADT values
+    void loadHeader (Header header) {
+        BTree.order = header.order;
+        minKeys = order / 2;
+        count = header.totalWords;
+        blockAmount = header.nodeAmount;
+        cache.emptyBlocks = header.emptyBlocks;
     }
 
-    // inserts word into BTree
-    public void insert(String word) {
-
-        // first entry
-        if (root == null) {
-            root = new BTNode(true);
-            root.words[0] = word;
-            root.n++;
-            height++;
-        } else { // tree not empty
-            if (root.n == 2 * branchingFactor - 1) { // root full? grow tree
-                BTNode node2 = new BTNode(false);
-
-                // add old root as child to new root
-                node2.children[0] = root;
-
-                // split old root and populate new root
-                node2.splitChild(0, root);
-
-                // Decide which child of new root gets final key
-                int i = 0;
-                if (node2.words[0].compareTo(word) < 0) 
-                    i++;
-                node2.children[i].insertNonFull(word);
-                root = node2;
-                height++;
-            } else //root not full? proceed to regular insertion
-                root.insertNonFull(word);
+    // adds word param to BTree
+    boolean add(String word) {
+        // if tree DNE
+        if(root == null) {
+            root = new Node(0); // add node at position 0 of persistent data as root & add to cache
+            count++;
+            blockAmount++;
+            root.add(word);
+            cache.add(root, true);
+            return true;
+        } else if(insert(word, root)) { // else use helper insert method to add word to btree
+            count++;
+            return true;
         }
+        return false;
     }
 
-    // Removes word from BTree
-    public void remove(String word) {
-        if (root == null) {
-            System.out.println("The tree is empty");
-            return ;
-        }
+    // adds word param into node param
+    boolean insert(String word, Node node) {
+        // already exist --> break	
+        if(node.contains(word))  
+            return false;
+        
+        // there's room for it and DNE --> add it
+        if(!node.isFull() && node.isLeaf()) { 
+            node.add(word);
+            cache.add(node, true);
+            return true;
+        // need to add to already full node, make new one
+        } else if(node.isFull() && node == root) {
+            // allocate new root and update nodes address
+            root = new Node(0);
+            node.setAddress(blockAmount++);
+            String tmp = split(node);
 
-        // call btnode.remove on word
-        root.remove(word);
-
-        if (root.n == 0) {  // root has no keys
-            BTNode tmp = root;
-            if (root.isLeaf)  // if leaf, make it null
-                root = null;
-            else
-                root = root.children[0]; // make first child root
-        }
-    }
-
-    public static class BTNode {
-        public String[] words;
-        public BTNode[] children;
-        public boolean isLeaf;
-        public int n;
-
-        // node constructor
-        public BTNode(boolean leaf) {
-            words = new String[2 * branchingFactor - 1];
-            children = new BTNode[2 * branchingFactor];
-            isLeaf = leaf;
-            n = 0;
-        }
-
-        // returns BTNode containing word if found
-        public BTNode search(String word) {
-            int i = 0;
-
-            // find first key greater than word
-            while (i < n && word.compareTo(words[i]) > 0)
-                i++;
-
-            // key is word, return node
-            if (words[i].equals(word))
-                return this;
-
-            // if leaf and word not equals key, word does not exist in tree
-            if (isLeaf == true)
-                return null;
-            
-            // find next possible child node for key to be in
-            return children[i].search(word);
-        }
-
-        // in order traversal of btree
-        public void traverse() {
-            int i = 0;
-            // traverse first size(keys) children
-            for (i = 0; i < n; i++) {
-                if (!isLeaf) // if not leaf traverse subtree before printing key
-                    children[i].traverse();
-                System.out.println(words[i]);
-            }
-
-            // traverse last subtree due to size(children) - 1 ^^^
-            if (!isLeaf)
-                children[i].traverse();
-        }
-
-        // utility fn for insertion, precondition is node isnt full when called
-        public void insertNonFull(String word) {
-            int i = n - 1; // greatest key index
-
-            if (isLeaf) {
-                // while keys are greater than word param
-                while (i >= 0 && words[i].compareTo(word) > 0) {
-                    words[i + 1] = words[i]; // shift keys
-                    i--; // update insertion index
-                }
-
-                if (i < 0) // second insertion
-                    words[i + 2] = word;
-                else // subsequent ones
-                    words[i + 1] = word;
-
-                n++;
-            } else { // not leaf node
-
-                // find child for new insertion
-                while (i >= 0 && words[i].compareTo(word) > 0)
-                    i--;
+            // add mid indenode of node as new root
+            root.add(tmp);
                 
-                // if child is full
-                if (children[i + 1].n == 2 * branchingFactor - 1) {
-                    splitChild(i + 1, children[i + 1]); // split it
-
-                    // figure out which child is getting new word
-                    if (words[i + 1].compareTo(word) < 0)
-                        i++;
-                }
-                children[i + 1].insertNonFull(word);
-            }
-        }
-
-        // utility function for splitting node at index i
-        // precondition: i valid index and node is a full btnode
-        public void splitChild(int i, BTNode node) {
-            BTNode tmp = new BTNode(node.isLeaf);
-            tmp.n = branchingFactor - 1;
-
-            // copy second half of node into tmp
-            for (int j = 0; j < branchingFactor - 1; j++) 
-                tmp.words[j] = node.words[j + branchingFactor];
+            // set children of new root to 
+            root.children[0] = node.getAddress();
+            root.children[1] = latterSplit.getAddress();
+                
+            // see if there's addresses to write new nodes to that were cleared and 
+            cache.emptyAddrInCache(node, root);
+            cache.emptyAddrInCache(latterSplit, root);
+            cache.add(root, true);
+            cache.add(node, true);
+            cache.add(latterSplit, true);
+                
             
-            if (!node.isLeaf) { // if node not leaf copy over corresponding children ^^^
-                for (int j = 0; j < branchingFactor; j++) 
-                    tmp.children[j] = node.children[j + branchingFactor];
+            // determine which child of root to add word param to
+            if(word.compareTo(tmp) < 0)
+                return insert(word, node); 
+            else if(word.compareTo(tmp)>0)
+                return insert(word, latterSplit);
+                    
+            return false;
+        } else { // node is full but node != root
+            Node next = null;
+            try { // load appropriate child for word to go into to the cache
+                next = cache.get(node.getChild(word));
+            } catch(Exception e) {
+                e.printStackTrace();
             }
 
-            // update node's word count
-            node.n = branchingFactor - 1;
+            // if child word belongs in is full too, split it as we did to root ^^^
+            if(next.isFull()) {  
 
-            // shift cursors children to make room for new child
-            for (int j = n; j >= i + 1; j--)
-                children[j + 1] = children[j];
-
-
-            // add tmp to children
-            children[i + 1] = tmp;
-
-            // make a location for a word from node to be inserted
-            for (int j = n - 1; j >= i; j--)
-                words[j + 1] = words[j];
-
-            // add word from node to cursor
-            words[i] = node.words[branchingFactor - 1];
-
-            n++;
+                String tmp = split(next);
+                node.add(tmp);
+                int index = node.getIndex(tmp);
+                        
+                node.children[index] = next.getAddress();
+                node.children[index + 1] = latterSplit.getAddress();
+                        
+                cache.emptyAddrInCache(next, node);
+                cache.emptyAddrInCache(latterSplit, node);
+                cache.add(node, true);
+                cache.add(next, true);
+                cache.add(latterSplit, true);
+                    
+                // find right grandchild for word to go into
+                if(word.compareTo(tmp) < 0)
+                    return insert(word, next);
+                if(word.compareTo(tmp) > 0)
+                    return insert(word, latterSplit);
+                        
+                return false;
+            }
+            return insert(word, next);
         }
+    }
 
-        // returns index of first key >= word
-        public int findKey(String word) {
-            int idx = 0;
-            while (idx < n && words[idx].compareTo(word) < 0)
-                ++idx;
-            return idx;
+    // Returns word node is being split at for full node insertion
+    String split(Node node) {
+        latterSplit = new Node(blockAmount++);
+        int mid = order / 2 - 1;
+        String tmp = node.words[mid];
+            
+        // add latter half of words to right slibling
+        for (int i = mid + 1; i < order - 1; i++) {
+            latterSplit.add(node.words[i]);
+            node.words[i] = null;
         }
+        
+        // add latter half of corresponding children to right slibling
+        for (int i = mid + 1; i < order; i++) {
+            latterSplit.children[(i - (mid + 1))] = node.children[i];
+            node.children[i]= -1;
+        }
+            
+        node.words[mid] = null;	
+            
+        return tmp;
+    }
 
-        // remove word from subtree of cursor
-        public void remove(String word) {
-            int idx = findKey(word);
+    // removes word parameter from btree if in root
+    boolean delete(String word) {
+        if(delete(word, root, null)) {  
+            count--;
+            return true;
+        }
+        return false;
+    }
 
-            // word in current cursor
-            if (idx < n && words[idx].equals(word)) {
-                if (isLeaf)
-                    removeFromLeaf(idx);
-                else
-                    removeFromNonLeaf(idx);
+
+    // removes word parameter from btree 
+    // helper function to ^^^^
+    boolean delete(String word, Node node, Node parent) {
+        String tmp = null;
+        
+        if(node == null || node.words[0] == null)
+            return false;
+        if(node != null) // if cursor node exists check if it can handle deleteetion
+            mergeOrBorrow(node, parent);
+        
+        // next node in case word not in cursor node
+        Node next = null;
+        
+        try { // get child of node from cache
+            next = cache.get(node.getChild(word));
+        } catch(Exception e) {
+            System.out.println(e);
+        }
+                
+        // word in cursor node?
+        if(node.contains(word)) {
+            // if simply a leaf delete word and add to cache
+            if(node.isLeaf()) { 
+                node.delete(word);
+                cache.add(node, true);
+            // cursor not leaf --> rotate next word from right subtree into x's place
             } else {
-                if (isLeaf) { // node leaf and not in node --> DNE
-                    System.out.println("The key " + word + " does not exist in the BTree");
-                    return;
+                tmp = successor(word, node, null); // finds 
+                    
+                if(node.contains(word) && tmp != null)
+                    node.words[node.getIndex(word)] = tmp;
+            }
+        
+            // cursor size is permissible after deletion?
+            if(node.size() >= minKeys - 1 || node == root)
+                return true;
+        } else
+            return delete(word, next, node);
+        return true;
+    }
+
+    // determines whether borrow or merge is necessary
+    boolean mergeOrBorrow(Node node, Node parent) {
+        // cursor is any node other than root that doesnt possess enough words
+        if(node.size() < minKeys && parent != null) {
+            // if you cant borrow a word from parent --> need to merge
+            if(!borrow(node, parent)) {
+                // get index of cursor from children of parent
+                int index = parent.getIndex(node.getAddress());
+                        
+                // clear persistent address in cache
+                cache.removeBlock(node.getAddress());
+
+                // merge cursor and parent
+                Node mergedNode = merge(node, parent);
+                        
+                // add updated post merge node as left child
+                if(index > 0)
+                    parent.children[index - 1] = node.getAddress();
+                else
+                    parent.children[index] = node.getAddress();
+                        
+                // if took key from root for merge, make merged node root
+                // update cache to root update and cleared merged node block
+                if(root.size() == 0) {	
+                    root = mergedNode;
+                    root.setAddress(0); 
+                    cache.add(root, true);
+                    cache.removeBlock(mergedNode.getAddress());
+                    return true;			
+                }
+                        
+                // make sure we're writing nodes in correct addresses
+                // parent and updated merged cursor node to cache
+                cache.emptyAddrInCache(node, parent);
+                cache.add(parent, true);
+                cache.add(mergedNode, true);
+                        
+                return true;
+            } else
+                return true;
+        }
+        return false;
+    }
+
+    // true if successfully borrowed word from parent otherwise false
+    boolean borrow(Node node, Node parent) {
+        // find position of cursor in children array of parent
+        int index = parent.getIndex(node.getAddress());
+        Node tmp = null;
+            
+        // try getting left or right slibling from cache
+        if(index > 0) {
+            try {
+                tmp = cache.get(parent.children[index - 1]);
+            } catch(Exception e) {
+                System.out.println(e);
+            }
+        } else if (index == 0) {
+            try {
+                tmp = cache.get(parent.children[index + 1]);
+            } catch(Exception e) {
+                System.out.println(e);
+            }
+        }
+            
+        // borrow from left sibling if cursor not leftmost child
+        if(index > 0 && tmp.size() >= minKeys) {
+            String largest = tmp.largestWord(); 
+            int largestIndex = tmp.getIndex(largest); // get greatest word from left sibling
+            Node child1 = null;
+            Node child2 = null;
+            try { // get children of word we're going to rotate
+                child1 = cache.get(tmp.children[largestIndex + 1]);
+                child2 = cache.get(tmp.children[largestIndex]);
+            } catch(Exception e) {
+                System.out.println(e);
+            }
+
+            // get word from parent to rotate to cursor
+            String replacement = parent.words[index - 1];
+
+            // rotate corrsponding parent word into cursor node
+            node.shiftWordsR(0);
+            node.words[0] = replacement;
+
+            // rotate right child largest lexographically sorted word into parent nodes
+            parent.words[index - 1] = largest;
+                
+            tmp.delete(largest);
+                
+            // if x isn't a leaf rotate children 
+            if(!node.isLeaf()) {
+                node.shiftChildrenR(0); // shift children to make room for rotated children
+                node.children[0] = child1.getAddress();
+                tmp.children[largestIndex] = child2.getAddress(); // update siblings children array
+                tmp.children[largestIndex + 1] = -1;
+            }
+
+
+            // update cache	
+            cache.add(tmp, true);
+            cache.add(node, true);
+            cache.add(parent, true);
+            return true;
+        // borrow from right sibling if cursor is leftmost child
+        } else if(index == 0 && tmp.size() >= minKeys) {
+            // get smallest lexographically sorted child of sibling
+            String smallest = tmp.words[0];
+            Node child = null;
+            try { // get corresponding child
+                child = cache.get(tmp.children[0]);
+            } catch(Exception e) {
+                System.out.println(e);
+            } // get smallest word in parent
+            String replacement = parent.words[index];
+                
+            // rotate smallest parent word into cursor 
+            node.add(replacement);
+            // rotate smallest child of sibling into parent
+            parent.words[index] = smallest;
+                
+            tmp.delete(smallest);
+                
+            // if cursor isnt a lead, rotate corresponding children & update caches
+            if(!node.isLeaf())
+                node.children[node.getIndex(replacement) + 1] = child.getAddress();
+                
+            cache.add(node, true);
+            cache.add(parent, true);
+            cache.add(tmp, true);
+
+            return true;
+        }	
+        return false;
+    }
+
+    // true if merge executed otherwise false
+    Node merge(Node node, Node parent) {
+        // index of cursor in parent
+        int index = parent.getIndex(node.getAddress());
+            
+        // try to get right or left sibling based off of index for merge
+        Node tmp = null;
+        if(index == 0) {
+            try {
+                tmp = cache.get(parent.children[1]);
+            } catch(Exception e) {
+                System.out.println(e);
+            }
+        } else {
+            try {
+                tmp = cache.get(parent.children[index - 1]);
+            } catch(Exception e) {
+                System.out.println(e);
+            }
+        }
+            
+        // if there is a sibling to merge with
+        if(tmp != null) {
+            if(index == 0) { // cursor is leftmost child
+                int size = node.size();
+                // rotate parent into cursor 
+                node.words[size] = parent.words[0];
+                size++;
+                        
+                // add siblings words & children to cursor for merge
+                for (int i = 0; i < tmp.size(); i++)
+                    node.words[size + i] = tmp.words[i];
+                for (int i = 0; i <= tmp.size(); i++)
+                    node.children[size + i] = tmp.children[i];
+                        
+                // get rid of sibling node
+                parent.delete(parent.words[0]);
+            } else { // cursor not leftmost child --> rotate parents greatest word to cursor
+                node.shiftWordsR(0);
+                node.words[0] = parent.words[index - 1];
+                int size = node.size();
+                        
+                // merge sibling with cursor
+                for (int i = tmp.size() - 1; i >= 0; i--) {
+                    node.shiftWordsR(0);
+                    node.words[0] = tmp.words[i];
                 }
 
-                // up to last child?
-                boolean flag = (idx == n) ? true : false;
+                for (int i = tmp.size(); i >= 0; i--) {
+                    node.shiftChildrenR(0);
+                    node.children[0] = tmp.children[i];
+                }
 
-                // fill child with word if needed
-                if (children[idx].n < branchingFactor)
-                    fill(idx);
-
-                // has btnode been merged?
-                if (flag && idx > n) // recurse merged node
-                    children[idx - 1].remove(word);
-                else // recurse filled child
-                    children[idx].remove(word);
+                // get rid of sibling
+                parent.delete(parent.words[index - 1]);
             }
         }
-
-        // remove word from leaf btnode's idx
-        public void removeFromLeaf(int idx) {
-            for (int i = idx + 1; i < n; ++i)
-                words[i - 1] = words[i];
-
-            n--;
-        }
-
-        // remove word at index idx of nonleaf btnode
-        public void removeFromNonLeaf(int idx) {
-            String word = words[idx];
-
-            // pred can donate, recurse down it and replace donatable with word
-            if (children[idx].n >= branchingFactor) {
-                String pred = getPred(idx);
-                words[idx] = pred;
-                children[idx].remove(pred);
-            } else if (children[idx + 1].n >= branchingFactor) {
-                // pred cant donate same logic with succesor sibling
-                String succ = getSucc(idx);
-                words[idx] = succ;
-                children[idx + 1].remove(succ);
-            } else { // neither sibling can donate then merge
-                merge(idx);
-                children[idx].remove(word);
-            }
-        }
-
-        // find pred word as left btnode siblings donation
-        public String getPred(int idx) {
-            BTNode cursor = children[idx];
-
-            // travese until get to leaf
-            while(!cursor.isLeaf)
-                cursor = cursor.children[cursor.n];
-
-            // return last word of left sibling leaf btnode
-            return cursor.words[cursor.n - 1];
-        }
-
-        // find succ word as right btnode siblings donation
-        public String getSucc(int idx) {
-            BTNode cursor = children[idx + 1];
-
-            while(!cursor.isLeaf)
-                cursor = cursor.children[0];
-
-            return cursor.words[0];
-        }
-
-        // fill child whos n violates btree invariants
-        public void fill(int idx) {
-            // if prev child has enough words borrow from them
-            if (idx != 0 && children[idx - 1].n >= branchingFactor)
-                borrowFromPrev(idx);
-
-            // if prev doesnt and next does borrow from them
-            else if (idx != n && children[idx + 1].n >= branchingFactor)
-                borrowFromNext(idx);
-
-            else {
-                if (idx != n) // not last child
-                    merge(idx); // merge with next sibling
-                else // is last child
-                    merge(idx - 1); // merge with prev sibling
-            }
-        }
-
-        // borrows word from left sibling and inserts into cursor btnode
-        public void borrowFromPrev(int idx) {
-            BTNode child = children[idx];
-            BTNode sibling = children[idx - 1];
-
-            // shift all of keys in child  right
-            for (int i = child.n - 1; i >=0; --i)
-                child.words[i + 1] = child.words[i];
-
-            if (!child.isLeaf) { // if child not leaf update child pointer indices
-                for (int i = child.n; i >= 0; --i)
-                    child.children[i + 1] = child.children[i];
-            }
-
-            // set child first key based off current node words
-            child.words[0] = words[idx - 1];
-
-            // update children of childs first index if necessary
-            if (!child.isLeaf) 
-                child.children[0] = sibling.children[sibling.n];
-
-            // move key from sibling to parent
-            words[idx - 1] = sibling.words[sibling.n - 1];
-
-            child.n++;
-            sibling.n--;
-        }
-
-        // 
-        public void borrowFromNext(int idx) {
-            BTNode child = children[idx];
-            BTNode sibling = children[idx + 1];
-
-            // insert last word from cursor to child
-            child.words[child.n] = words[idx];
-
-            // update children too if necessary
-            if (!child.isLeaf)
-                child.children[child.n + 1] = sibling.children[0];
-
-            // cursor gets siblings first word
-            words[idx] = sibling.words[0];
-
-            // shifting siblings keys left
-            for (int i = 1; i < sibling.n; ++i)
-                sibling.words[i - 1] = sibling.words[i];
-
-            // updated children pointers in sibling if necessary
-            if (!sibling.isLeaf) {
-                for (int i = 1; i < sibling.n; ++i)
-                    sibling.children[i - 1] = sibling.children[i];
-            }
-
-            child.n++;
-            sibling.n--;
-        }
-
-        // merges two children of word if necessary during deletion
-        public void merge(int idx) {
-            BTNode child = children[idx];
-            BTNode sibling = children[idx + 1];
-
-            // get middle word and add to child
-            child.words[branchingFactor - 1] = words[idx];
-
-            // copy over keys between siblings
-            for (int i = 0; i < sibling.n; ++i)
-                child.words[i + branchingFactor] = sibling.words[i];
             
-            // copy pointers too if necessary
-            if (!child.isLeaf) {
-                for (int i = 0; i <= sibling.n; ++i)
-                    child.children[i + branchingFactor] = sibling.children[i];
-            }
+        // update cache per siblings deletion
+        cache.removeBlock(tmp.getAddress());
+        return node;	
+    }
 
-            // update cursors words indices to fill gap created ^^
-            for (int i = idx + 1; i < n; ++i)
-                words[i - 1] = words[i];
+    // Finds smallest string in the right subtree of the cursor
+    String successor(String word, Node node, Node parent) {
+        String tmp = null;
+        Node child = null;
 
-            // update child pointers left as per ^^
-            for (int i = idx + 2; i <= n; ++i)
-                children[i - 1] = children[i];
-
-            child.n += sibling.n + 1;
-            n--;
+        try { // smallest child
+            child = cache.get(node.children[0]);
+        } catch(Exception e) {
+            System.out.println(e);
         }
+            
+        if (node.contains(word)) {  // if word in cursor, get its right child
+            int index = node.getIndex(word);  
+            try {  
+                child = cache.get(node.children[index + 1]);
+            } catch(Exception e) {
+                System.out.println(e);
+            }
+            tmp = successor(word, child, node);  // smallest word is now right child recursion result
+        } else if (node.children[0] != -1 && !child.isEmpty())
+            tmp = successor(word, child, node); // recurse down left child
+
+        // there is no smallest word in subtree
+        if (tmp == null) {
+            tmp = node.words[0];  // get smallest word from cursor & delete it
+            node.delete(tmp);  
+        }
+
+        // see if cursor require borrow or merge after removal of smallest word
+        mergeOrBorrow(node, parent);
+            
+        // if we've successfully gotten a replacement, update word slot post deletion
+        if (node.contains(word) && tmp != null)
+            node.words[node.getIndex(word)] = tmp;
+    
+        cache.add(node, true);
+        return tmp;
+    }
+
+    // Stringify BTree for demoing purposes
+    public String toString() {
+        String result = "";
+        result += root.toString();
+        for (int i = 0; i < order; i++)
+            result += "\nChild #" + i + "\t" + root.children[i];
+                
+        return result;
     }
 }
