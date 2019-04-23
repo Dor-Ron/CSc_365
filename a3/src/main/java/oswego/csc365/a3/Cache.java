@@ -6,7 +6,10 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 
+
+// Class for cache manager
 public class Cache implements Serializable {
     
     public transient RandomAccessFile file = null;
@@ -26,11 +29,9 @@ public class Cache implements Serializable {
         cache = new Node[maxBlocks];
         dirty = new boolean[maxBlocks];
         emptyBlocks = new ArrayList<Integer>();
-        for (int i = 0; i < maxBlocks; i++)
-            dirty[i] = false;
         addresses = new int[maxBlocks];
-        for (int i = 0; i < maxBlocks; i++)
-            addresses[i] = -1;	
+        Arrays.fill(dirty, false);
+        Arrays.fill(addresses, -1);
     }
 
 
@@ -82,17 +83,17 @@ public class Cache implements Serializable {
 
     // true if empty block in persistent memory to write to otherwise false
     public boolean emptyAddrInCache(Node cursor, Node parent) {
-        // there is an emparentty block
+        // there is an empty block in cache and parent exists
         if(emptyBlocks.size() > 0 && parent != null) {
             int empty = emptyBlocks.get(0);
-            int addresses;
+            int address;
             if(!parent.isEmpty()) // if parent then find addresses of child
-                addresses = parent.getIndex(cursor.getAddress());
-            else		
-                addresses = 0;
+                address = parent.getIndex(cursor.getAddress());
+            else // 
+                address = 0;
                 
             cursor.setAddress(empty);  // update child address
-            parent.children[addresses] = empty;  // update pointer in parent
+            parent.children[address] = empty;  // update pointer in parent
             emptyBlocks.remove(0);  // update cache state
             return true;
         }

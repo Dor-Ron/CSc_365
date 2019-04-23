@@ -9,6 +9,7 @@ public class BTree implements Serializable {
     public Node root;
     public Node latterSplit;
     public int count = 0;
+    public int height = 0;
     public Cache cache = null;
     public static int blockAmount = 0;
 
@@ -27,6 +28,7 @@ public class BTree implements Serializable {
         blockAmount = header.nodeAmount;
         cache = header.cache;
         cache.emptyBlocks = header.emptyBlocks;
+        height = header.height;
     }
 
     // sets BTree attributes in accordance to param .hdr ADT values
@@ -36,6 +38,7 @@ public class BTree implements Serializable {
         count = header.totalWords;
         blockAmount = header.nodeAmount;
         cache.emptyBlocks = header.emptyBlocks;
+        height = header.height;
     }
 
     // adds word param to BTree
@@ -44,6 +47,7 @@ public class BTree implements Serializable {
         if(root == null) {
             root = new Node(0); // add node at position 0 of persistent data as root & add to cache
             count++;
+            height++;
             blockAmount++;
             root.add(word);
             cache.add(root, true);
@@ -73,12 +77,14 @@ public class BTree implements Serializable {
             node.setAddress(blockAmount++);
             String tmp = split(node);
 
-            // add mid indenode of node as new root
+            // add mid index node as new root
             root.add(tmp);
                 
             // set children of new root to 
             root.children[0] = node.getAddress();
             root.children[1] = latterSplit.getAddress();
+
+            height++;
                 
             // see if there's addresses to write new nodes to that were cleared and 
             cache.emptyAddrInCache(node, root);
@@ -219,6 +225,7 @@ public class BTree implements Serializable {
 
                 // merge cursor and parent
                 Node mergedNode = merge(node, parent);
+                --blockAmount;
                         
                 // add updated post merge node as left child
                 if(index > 0)

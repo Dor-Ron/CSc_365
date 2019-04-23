@@ -79,7 +79,7 @@
           <artifactId>exec-maven-plugin</artifactId>
           <version>1.5.0</version>
           <configuration>
-            <mainClass>oswego.csc365.a3.Main</mainClass>
+            <mainClass>oswego.csc365.a3.SimpleService</mainClass>
           </configuration>
         </plugin>
       </plugins>

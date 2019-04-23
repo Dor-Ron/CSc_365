@@ -1,8 +1,10 @@
 package oswego.csc365.a4;
 
-
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.RandomAccessFile;
+import java.io.File;
 
 
 class FLRAF extends RandomAccessFile {
@@ -10,7 +12,7 @@ class FLRAF extends RandomAccessFile {
 	
 	// Constructor
 	public FLRAF(int size) throws FileNotFoundException {
-		super(new File("output.flraf"), "rw");
+		super(new File("words.flraf"), "rw");
 		blockSize = size;
 	}
 	

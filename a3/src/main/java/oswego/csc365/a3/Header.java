@@ -11,6 +11,8 @@ class Header implements Serializable {
     public int order;
     public int totalWords;
     public int nodeAmount;
+    public int height;
+    public int leaves;
     
     public File file;
     public Cache cache = null;
@@ -18,12 +20,14 @@ class Header implements Serializable {
 
     
     // Constructor
-    Header(File filePath, int wordTotal, int _order,  int _nodeAmount, ArrayList<Integer> _emptyBlocks) {
+    Header(File filePath, int wordTotal, int _order,  int _nodeAmount, ArrayList<Integer> _emptyBlocks, int _height) {
         file = filePath;
         totalWords = wordTotal;
+        height = _height;
         order = _order;
         nodeAmount = _nodeAmount;
         emptyBlocks = _emptyBlocks;
+        leaves = (int) Math.pow(_order, _height - 1) / (_order * (_height - 1));
         try {
             cache = new Cache(filePath, "rw", 28, 4);
         } catch(Exception e) {

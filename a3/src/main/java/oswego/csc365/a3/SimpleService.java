@@ -8,9 +8,9 @@ public class SimpleService {
     static final int PORT = 8000;
 
 	// as per https://stackoverflow.com/questions/24709769/java-using-system-getpropertyuser-dir-to-get-the-home-directory
-    File headerFile = new File(System.getProperty("user.home") + System.getProperty("file.separator") + "header.hdr");
-    File btreeFile = new File(System.getProperty("user.home") + System.getProperty("file.separator") + "btree.btr");
-    File flraf = new File(System.getProperty("user.home") + System.getProperty("file.separator") + "nodes.flraf");
+    File headerFile = new File("header.hdr");
+    File btreeFile = new File("btree.btr");
+    File flraf = new File("nodes.flraf");
 
 	// as per professor wenderholms fancy serialization demo on her sites resources
 	FileInputStream fis = null;
@@ -56,7 +56,7 @@ public class SimpleService {
 			header = (Header) ois.readObject();
 		} catch(Exception e) { // create new ones
 	    	System.out.println("Creating a new header file\n");
-	    	header = new Header(flraf, 0, 8, 0, new ArrayList<Integer>());
+	    	header = new Header(flraf, 0, 8, 0, new ArrayList<Integer>(), 0);
 		}
 		
 		try { // try to load persistent btree
@@ -143,7 +143,9 @@ public class SimpleService {
 
 				// update any changes to persistant btree per the request
 				save();
-				reply += "<br><h3><font color=\"white\">" + btree.count +"</font> words in the dictionary btree.</h3></font>\n";
+				reply += "<br><h3><font color=\"white\">" + btree.count + "</font> words in the dictionary btree.</h3></font>\n";
+				reply += "<br><h3><font color=\"white\">" + btree.height + "</font> height of the tree.</h3></font>\n";
+
 					int len = reply.length();
 					
 					out.println("HTTP/1.0 200 OK");
@@ -165,7 +167,7 @@ public class SimpleService {
 	// saves changes from user to persistant data on server
     void save() {
 		btree.cache.dump();
-		header = new Header(flraf, btree.count, BTree.order, btree.blockAmount, btree.cache.emptyBlocks);
+		header = new Header(flraf, btree.count, BTree.order, btree.blockAmount, btree.cache.emptyBlocks, btree.height);
 		header.setRoot(btree.root);
 		try { // try updating header file serialized data
 			fos = new FileOutputStream(headerFile);

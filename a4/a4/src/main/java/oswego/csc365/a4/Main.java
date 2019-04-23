@@ -13,7 +13,7 @@ public class Main {
 	public static void main(String[] args) {
 		try {
 			ServerSocket serverSocket = new ServerSocket(PORT);
-	  
+	  		System.out.println("Waiting for indices to be searched in the API\n");
 			while (true) {
 				Socket client = serverSocket.accept();
 			

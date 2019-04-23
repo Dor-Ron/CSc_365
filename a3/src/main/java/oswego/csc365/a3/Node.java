@@ -1,6 +1,8 @@
 package oswego.csc365.a3;
 
 import java.io.Serializable;
+import java.util.Arrays;
+
 
 // Node class to be used for the BTree
 public class Node implements Serializable {
@@ -13,8 +15,7 @@ public class Node implements Serializable {
 		words = new String[BTree.order - 1];
 		children = new int[BTree.order];
 		address = -1;
-		for(int i = 0; i < children.length; i++)
-			children[i] = -1;
+		Arrays.fill(children, -1);
 	}
 
 	// constructor for when address provided
@@ -22,8 +23,7 @@ public class Node implements Serializable {
 		words = new String[BTree.order - 1];
 		children = new int[BTree.order];
 		address = _address;
-		for(int i = 0; i < children.length; i++)
-			children[i] = -1;
+		Arrays.fill(children, -1);
 	}
 
 	// adds string param as key of node
@@ -133,7 +133,7 @@ public class Node implements Serializable {
 	String largestWord() {
 		for(int i = words.length - 1; i >= 0; i--) {
 			if(words[i] != null)
-			return words[i];
+				return words[i];
 		}
 		return null;
 	}
@@ -170,7 +170,7 @@ public class Node implements Serializable {
 	boolean contains(String word) {
 		for(int i = 0; i < words.length; i++) {
 			if(word.equals(words[i]))
-			return true;
+				return true;
 		}
 		return false;
 	}
