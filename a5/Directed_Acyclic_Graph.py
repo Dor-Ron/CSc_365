@@ -29,7 +29,9 @@ class Directed_Acyclic_Graph(object):
             print("An exception has occured while trying to initiate a graph")
             exit(0)
 
+
     def stringify(self):
+        ''' toString method for dag '''
         return """
         DAG: {}
 
@@ -38,7 +40,14 @@ class Directed_Acyclic_Graph(object):
             self.graph_dict,
             self.profit_dict
         )
-                
 
-dag = Directed_Acyclic_Graph("eg.txt")
-print(dag.stringify())
+
+    def find_positive_jobs(self):
+        ''' 
+        returns a list of all jobs/keys with positive profits.
+        utilized for optimization, as jobs that are inherently
+        costly should not be processed
+        '''
+        return [key for key in filter(lambda x: self.profit_dict[x] > 0,
+            self.profit_dict.keys()
+        )]
