@@ -21,7 +21,7 @@ class Directed_Acyclic_Graph(object):
                     elif "~" in trisect[2]:
                         dependencies = None
                     else:
-                        dependencies = trisect[2]
+                        dependencies = [trisect[2]]
                     
                     self.graph_dict[trisect[0]] = dependencies
                     self.profit_dict[trisect[0]] = int(trisect[1])
@@ -51,3 +51,30 @@ class Directed_Acyclic_Graph(object):
         return [key for key in filter(lambda x: self.profit_dict[x] > 0,
             self.profit_dict.keys()
         )]
+
+
+    def net_profit(self, job_id, visited_set):
+        ''' 
+        calculates net profit for a task_id recursively
+        returns (net-profit, job-combination-set) tuple
+        '''
+        
+        visited = visited_set
+        visited.add(job_id)
+        if self.graph_dict[job_id] == None:
+            return self.profit_dict[job_id]
+        
+        if not visited_set:
+            visited = set()
+
+        summ = self.profit_dict[job_id]
+        for depen in self.graph_dict[job_id]:
+            if depen not in visited:
+                visited.add(depen)
+                net = self.net_profit(depen, visited)
+                if type(net) == int:
+                    summ += net
+                    continue
+                summ += net[0]
+
+        return (summ, visited)
