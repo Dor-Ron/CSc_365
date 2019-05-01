@@ -4,9 +4,9 @@ from math import floor, factorial
 class Profit_Genetic_Algorithm(object):
     ''' class for DAG profit model estimation finder using genetic algorithms '''
     
-    MUTATION_RATE = 0.01
+    MUTATION_RATE = 0.02
     N_GENERATIONS = 100
-    CROSSOVER_RATE = 0.5  # low crossover cause great fitness function
+    CROSSOVER_RATE = 0.5
     POPULATION_SIZE = 10
 
     def __init__(self, dag):
@@ -17,8 +17,6 @@ class Profit_Genetic_Algorithm(object):
         self.ordered_positive_jobs = sorted(dag.find_positive_jobs())
         self.gene_size = len(self.ordered_positive_jobs)
         self.population = self.generate_initial_population()
-        self.highest_fitness = 0
-        self.most_fit_indivual = None
 
         # fitnesses cache for optimization
         self.cache = {} 
@@ -43,13 +41,11 @@ class Profit_Genetic_Algorithm(object):
             if (choice(range(100)) / 100.0) < self.MUTATION_RATE:
                 locus = choice(range(self.gene_size))
                 indiv_array = list(self.population[idx])
-                # print("before:\t" + self.population[idx])
                 if indiv_array[locus] == "1":
                     indiv_array[locus] = "0"
                 else:
                     indiv_array[locus] = "1"
                 self.population[idx] = "".join(indiv_array)
-                # print("after:\t" + self.population[idx])
 
         
     def calculate_fitness(self, individual):
@@ -61,16 +57,11 @@ class Profit_Genetic_Algorithm(object):
         for idx in range(len(individual)):
             if individual[idx] == "1":
                 job_id = self.ordered_positive_jobs[idx]          
-                if job_id in visited:
+                if job_id in visited:  # if job already visited don't re-run
                     continue
                 tup = self.dag.net_profit(job_id, visited)
-                if type(tup) != int:
-                    visited = set(list(visited) + list(tup[1]))
-                    total += tup[0]
-
-                else:
-                    visited = set(list(visited) + [tup])
-                    total += tup        
+                visited = set(list(visited) + list(tup[1]))
+                total += tup[0]     
         return total
 
 
@@ -79,7 +70,7 @@ class Profit_Genetic_Algorithm(object):
         
         ret = []
         for idx in range(len(self.population)):
-            if self.population[idx] in self.cache:
+            if self.population[idx] in self.cache:  # already know the price, dynamic programming stuff
                 ret.append(self.cache[self.population[idx]])
                 continue
             self.cache[self.population[idx]] = self.calculate_fitness(self.population[idx])
@@ -114,8 +105,7 @@ class Profit_Genetic_Algorithm(object):
     def generate_next_gen(self):
         ''' generates next generation of population '''
 
-        hashmap = {indiv: fit for (indiv, fit) in zip(self.population, self.get_fitnesses())}
-        sorted_keys_by_val = sorted(hashmap.items(), key = lambda pair: pair[1])[::-1]
+        sorted_keys_by_val = self.rank_population()
         next_gen = []
 
         # fill first half of next gen based off of most fit parents
@@ -138,10 +128,43 @@ class Profit_Genetic_Algorithm(object):
 
     def run_genetic_algorithm(self):
         ''' executes genetic algorithm '''
-        print(self.population)
-        for _ in range(self.N_GENERATIONS):
+
+        init = self.population
+
+        print(init)
+        for it in range(self.N_GENERATIONS):
+            print("Gen #" + str(it + 1) + "  ", end="")
             self.generate_next_gen()
 
+        most = self.rank_population()[0]
+
+        print(self.result().format(init, self.population, most))
+
+        if most[1] > 0:
+            stri = "You should do jobs: "
+            for idx in range(len(most[0])):
+                if most[0][idx] == "1":
+                    stri += self.ordered_positive_jobs[idx] + " "
+            print(stri)
+        else:
+            print("sum of most profitable job combination is negative, don't take any")
+
+    
+    def rank_population(self):
+        ''' returns a list of the inidividuals ranked within a population by fitness score '''
+    
         hashmap = {indiv: fit for (indiv, fit) in zip(self.population, self.get_fitnesses())}
-        sorted_keys_by_val = sorted(hashmap.items(), key = lambda pair: pair[1])[::-1]
-        print(sorted_keys_by_val[0])
+        return sorted(hashmap.items(), key = lambda pair: pair[1])[::-1]
+
+
+
+    def result(self):
+        ''' returns string to be formatted of GAs result '''
+
+        return """
+        initial population: {}
+
+        final population: {}
+
+        most fit individual: {}
+        """

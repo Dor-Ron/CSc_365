@@ -10,19 +10,22 @@ class Directed_Acyclic_Graph(object):
             exit(0)
         
         try:
-            self.graph_dict = {}
-            self.size = len(self.graph_dict)
-            self.profit_dict = {}
+            self.graph_dict = {}  # id -> dep
+            self.size = len(self.graph_dict) 
+            self.profit_dict = {}  # id -> $
             with open(filepath) as job_file:
                 for line in job_file:
                     trisect = line.strip("\n").split(" ")
-                    if "," in trisect[2]:
+                    
+                    # get dependencies
+                    if "," in trisect[2]:  #
                         dependencies = trisect[2].split(",")
                     elif "~" in trisect[2]:
                         dependencies = None
                     else:
                         dependencies = [trisect[2]]
                     
+                    # enter them into data
                     self.graph_dict[trisect[0]] = dependencies
                     self.profit_dict[trisect[0]] = int(trisect[1])
         except:
@@ -60,15 +63,17 @@ class Directed_Acyclic_Graph(object):
         '''
         
         visited = visited_set
-        visited.add(job_id)
-        if self.graph_dict[job_id] == None:
-            return self.profit_dict[job_id]
+        visited.add(job_id) # add task to set
+        if self.graph_dict[job_id] == None: # no dependencies
+            return (self.profit_dict[job_id], visited) 
         
         if not visited_set:
             visited = set()
 
         summ = self.profit_dict[job_id]
-        for depen in self.graph_dict[job_id]:
+
+        # case of dependencies ---> recursion
+        for depen in self.graph_dict[job_id]:  
             if depen not in visited:
                 visited.add(depen)
                 net = self.net_profit(depen, visited)
