@@ -6,8 +6,8 @@ class Profit_Genetic_Algorithm(object):
     
     MUTATION_RATE = 0.02
     N_GENERATIONS = 100
-    CROSSOVER_RATE = 0.5
-    POPULATION_SIZE = 10
+    CROSSOVER_RATE = 0.7
+    POPULATION_SIZE = 13
 
     def __init__(self, dag):
         ''' constructor for genetic algorithm '''
@@ -81,9 +81,7 @@ class Profit_Genetic_Algorithm(object):
     def natural_selection(self):
         ''' returns two parents from population with fitness influencing chance of getting selected '''
 
-        hashmap = {indiv: fit for (indiv, fit) in zip(self.population, self.get_fitnesses())}
-        sorted_keys_by_val = sorted(hashmap.items(), key = lambda pair: pair[1])[::-1]
-
+        sorted_keys_by_val = self.rank_population()
         big_arr = []
         for idx in range(len(sorted_keys_by_val), 0, -1):
             big_arr += [sorted_keys_by_val[::-1][idx - 1][0]] * idx
@@ -133,7 +131,7 @@ class Profit_Genetic_Algorithm(object):
 
         print(init)
         for it in range(self.N_GENERATIONS):
-            print("Gen #" + str(it + 1) + "  ", end="")
+            print("Gen #" + str(it + 1) + "  ", end = "")
             self.generate_next_gen()
 
         most = self.rank_population()[0]
@@ -155,7 +153,6 @@ class Profit_Genetic_Algorithm(object):
     
         hashmap = {indiv: fit for (indiv, fit) in zip(self.population, self.get_fitnesses())}
         return sorted(hashmap.items(), key = lambda pair: pair[1])[::-1]
-
 
 
     def result(self):
